@@ -445,14 +445,15 @@ async def add_security_headers(request: Request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",           
-        "http://localhost:8000",  
-        "http://127.0.0.1:8000",  
-        "https://*.railway.app",
-        "https://*.cervosys.app",     
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
     ],
+    # allow_origin_regex matches subdomains like https://terra.cervosys.app
+    allow_origin_regex=r"^https:\/\/(?:.*\.)?(?:cervosys\.app|railway\.app)$",
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    # include OPTIONS so preflight requests are allowed
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -655,6 +656,15 @@ async def save_sensor_data(sensor_data: SensorData):
                 "trace": tb
             }
         )
+
+
+@app.options("/sensor/data")
+async def options_sensor_data(request: Request):
+    """Explicitly handle preflight OPTIONS for /sensor/data.
+    This helps in cases where a reverse proxy rewrites paths or strips headers
+    and the default CORSMiddleware preflight handling is bypassed.
+    """
+    return JSONResponse(content={"ok": True})
         
 @app.get("/sensor/data")
 async def get_sensor_data():
